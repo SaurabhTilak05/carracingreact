@@ -2,31 +2,51 @@ import { useState } from "react";
 import GameCanvas from "./components/GameCanvas";
 import HUD from "./components/HUD";
 import Overlay from "./components/Overlay";
-import Controls from "./components/Controls";
 import MobileControls from "./components/MobileControls";
 import "./styles/App.css";
+
 export default function App() {
-  const [gameState, setGameState] = useState("MENU"); // MENU | PLAYING | PAUSED | GAMEOVER
+  const [gameState, setGameState] = useState("MENU"); // MENU | PLAYING | GAMEOVER
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(Number(localStorage.getItem("high") || 0));
-  const [muted, setMuted] = useState(false);
+  const [highScore, setHighScore] = useState(
+    Number(localStorage.getItem("high") || 0)
+  );
+
+  // 🔊 Engine music toggle
+  const [musicOn, setMusicOn] = useState(true);
 
   return (
     <div className="app">
-      <header className="topbar" role="banner">
+      <header className="topbar">
         <div className="brand">
-          <img src="/assets/images/player.png" alt="" className="brand-icon" aria-hidden="true" />
+          <img
+            src="assets/images/player.png"
+            alt=""
+            className="brand-icon"
+          />
           <h1 className="brand-title">Car Racing Pro</h1>
         </div>
-        <Controls
-          gameState={gameState}
-          setGameState={setGameState}
-          muted={muted}
-          setMuted={setMuted}
-        />
+
+        {/* 🔊 MUSIC TOGGLE */}
+        <button
+          className="music-btn"
+          onClick={() => {
+            setMusicOn((m) => !m);
+
+            if (window.__engineAudio) {
+              if (musicOn) {
+                window.__engineAudio.pause();
+              } else {
+                window.__engineAudio.play().catch(() => {});
+              }
+            }
+          }}
+        >
+          {musicOn ? "🔊 Music On" : "🔇 Music Off"}
+        </button>
       </header>
 
-      <main className="game-wrap" role="main">
+      <main className="game-wrap">
         <section className="canvas-wrap">
           <GameCanvas
             gameState={gameState}
@@ -35,8 +55,9 @@ export default function App() {
             setScore={setScore}
             highScore={highScore}
             setHighScore={setHighScore}
-            muted={muted}
+            musicOn={musicOn}
           />
+
           <MobileControls />
         </section>
 
@@ -47,13 +68,16 @@ export default function App() {
             gameState={gameState}
             score={score}
             highScore={highScore}
-            onStart={() => setGameState("PLAYING")}
-            onToggleSound={() => setMuted((m) => !m)}
+            onStart={() => {
+              // 🔥 Start engine sound safely
+              window.__engineAudio?.play().catch(() => {});
+              setGameState("PLAYING");
+            }}
           />
         )}
       </main>
 
-      <footer className="footer" role="contentinfo">
+      <footer className="footer">
         <p>© Car Racing Pro — React edition</p>
       </footer>
     </div>

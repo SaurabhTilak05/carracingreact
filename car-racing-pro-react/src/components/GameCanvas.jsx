@@ -1,15 +1,15 @@
+// src/components/GameCanvas.jsx
 import React, { useRef, useEffect } from "react";
 import useGameEngine from "../hooks/useGameEngine";
+import Overlay from "./Overlay";
 import "../styles/GameCanvas.css";
 
 export default function GameCanvas({
   gameState,
   setGameState,
   score,
-  setScore,
   highScore,
-  setHighScore,
-  muted,
+  ...rest
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -21,22 +21,21 @@ export default function GameCanvas({
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
-      const rect = container.getBoundingClientRect();
-      const width = Math.min(rect.width, 480);
-      const height = Math.round((width / 400) * 700);
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
+      const width = Math.min(container.clientWidth, 480);
+      const height = (width / 400) * 700;
+
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+
       const ctx = canvas.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
     resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(container);
-    window.addEventListener("orientationchange", resize);
-    return () => { ro.disconnect(); window.removeEventListener("orientationchange", resize); };
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
   }, []);
 
   useGameEngine({
@@ -44,24 +43,49 @@ export default function GameCanvas({
     gameState,
     setGameState,
     score,
-    setScore,
     highScore,
-    setHighScore,
-    muted,
+    ...rest,
   });
 
-  return (
-    <div className="game-wrapper">
-      <div className="game-container" ref={containerRef}>
-        <canvas ref={canvasRef} id="gameCanvas" />
-      </div>
+ return (
+  <div className="game-wrapper">
+    <div className="game-container" ref={containerRef}>
+      <canvas ref={canvasRef} />
 
-      <div className="controls-row">
-        <button id="btnLeft" className="control-btn">◀</button>
-        <button id="startBtn" className="primary-btn">Start</button>
-        <button id="btnRight" className="control-btn">▶</button>
-        <button id="btnNitro" className="control-btn">Nitro</button>
+      {/* 🔥 OVERLAY (START / GAME OVER) */}
+      <Overlay
+        gameState={gameState}
+        score={score}
+        highScore={highScore}
+        onStart={() => {
+          // start engine sound (browser-safe)
+          window.__engineAudio?.play().catch(() => {});
+          setGameState("PLAYING");
+        }}
+      />
+
+      {/* 🔥 MOBILE CONTROLS (LEFT / RIGHT) */}
+      <div className="controls-overlay">
+        <button
+          className="control-btn"
+          onPointerDown={() =>
+            document.dispatchEvent(new Event("game-left"))
+          }
+        >
+          ◀
+        </button>
+
+        <button
+          className="control-btn"
+          onPointerDown={() =>
+            document.dispatchEvent(new Event("game-right"))
+          }
+        >
+          ▶
+        </button>
       </div>
     </div>
-  );
+  </div>
+);
+
 }
