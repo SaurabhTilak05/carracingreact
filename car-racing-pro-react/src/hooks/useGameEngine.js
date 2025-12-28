@@ -22,31 +22,37 @@ export default function useGameEngine({
     // -----------------------
     // Images (use /assets/... so Vite handles base automatically)
     // -----------------------
+    // at top of file (inside the useEffect or module scope)
+    const ASSET_BASE = import.meta.env.BASE_URL || "/";
+
+    // Images (use ASSET_BASE so dev and prod both work)
     const playerImg = new Image();
-    playerImg.src = "/assets/images/player.png";
+    playerImg.src = `${ASSET_BASE}assets/images/player.png`;
 
     const enemyImg1 = new Image();
-    enemyImg1.src = "/assets/images/enemy_1.png";
+    enemyImg1.src = `${ASSET_BASE}assets/images/enemy_1.png`;
 
     const enemyImg2 = new Image();
-    enemyImg2.src = "/assets/images/enemy_2.png";
+    enemyImg2.src = `${ASSET_BASE}assets/images/enemy_2.png`;
 
     const roadTile = new Image();
-    roadTile.src = "/assets/images/road_tile.png";
+    roadTile.src = `${ASSET_BASE}assets/images/road_tile.png`;
 
     const nitroImg = new Image();
-    nitroImg.src = "/assets/images/nitro.png";
+    nitroImg.src = `${ASSET_BASE}assets/images/nitro.png`;
+
 
     // -----------------------
     // Audio (use /assets/audio/...)
     // -----------------------
     const audio = createAudioManager({
-      engine: "/assets/audio/engine.mp3",
-      crash: "/assets/audio/crash.wav",
-      pickup: "/assets/audio/pickup.wav",
-      click: "/assets/audio/click.wav",
+      engine: "assets/audio/engine.mp3",
+      crash: "assets/audio/crash.wav",
+      pickup: "assets/audio/pickup.wav",
+      click: "assets/audio/click.wav",
       muted,
     });
+
 
     // -----------------------
     // Sizes & state
