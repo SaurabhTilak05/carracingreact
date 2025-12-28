@@ -14,37 +14,32 @@ export default function useGameEngine({
 }) {
   useEffect(() => {
     const canvas = canvasRef?.current;
-    if (!canvas) return; // guard if ref not attached yet
-
+    if (!canvas) return;
     const ctx = canvas.getContext?.("2d");
-    if (!ctx) return; // guard if canvas context not available
+    if (!ctx) return;
 
-    // -----------------------
-    // Images (use /assets/... so Vite handles base automatically)
-    // -----------------------
-    // at top of file (inside the useEffect or module scope)
     const ASSET_BASE = import.meta.env.BASE_URL || "/";
 
-    // Images (use ASSET_BASE so dev and prod both work)
+    // Preload images
     const playerImg = new Image();
-    playerImg.src = `${ASSET_BASE}assets/images/player.png`;
-
     const enemyImg1 = new Image();
-    enemyImg1.src = `${ASSET_BASE}assets/images/enemy_1.png`;
-
     const enemyImg2 = new Image();
-    enemyImg2.src = `${ASSET_BASE}assets/images/enemy_2.png`;
-
     const roadTile = new Image();
-    roadTile.src = `${ASSET_BASE}assets/images/road_tile.png`;
-
     const nitroImg = new Image();
+
+    playerImg.src = `${ASSET_BASE}assets/images/player.png`;
+    enemyImg1.src = `${ASSET_BASE}assets/images/enemy_1.png`;
+    enemyImg2.src = `${ASSET_BASE}assets/images/enemy_2.png`;
+    roadTile.src = `${ASSET_BASE}assets/images/road_tile.png`;
     nitroImg.src = `${ASSET_BASE}assets/images/nitro.png`;
 
+    const images = [playerImg, enemyImg1, enemyImg2, roadTile, nitroImg];
+    let imagesLoaded = 0;
+    images.forEach((img) => {
+      if (img.complete) imagesLoaded++;
+      else img.onload = () => imagesLoaded++;
+    });
 
-    // -----------------------
-    // Audio (use /assets/audio/...)
-    // -----------------------
     const audio = createAudioManager({
       engine: "assets/audio/engine.mp3",
       crash: "assets/audio/crash.wav",
@@ -53,14 +48,15 @@ export default function useGameEngine({
       muted,
     });
 
+    // responsive sizes (use CSS-driven canvas size; compute logical sizes)
+    const dpr = () => window.devicePixelRatio || 1;
+    const logicalWidth = () => canvas.width / dpr();
+    const logicalHeight = () => canvas.height / dpr();
 
-    // -----------------------
-    // Sizes & state
-    // -----------------------
-    const carW = canvas.width * 0.12;
-    const carH = carW * 2;
-    const enemyW = carW;
-    const enemyH = carH;
+    const carW = () => logicalWidth() * 0.12;
+    const carH = () => carW() * 2;
+    const enemyW = () => carW();
+    const enemyH = () => carH();
 
     let enemies = [];
     let powerUps = [];
@@ -73,9 +69,9 @@ export default function useGameEngine({
 
     const player = {
       x: lanes[1],
-      y: canvas.height - carH - 30,
-      w: carW,
-      h: carH,
+      y: 0,
+      w: 0,
+      h: 0,
       lane: 1,
       baseSpeed: 5,
       speed: 5,
@@ -85,23 +81,17 @@ export default function useGameEngine({
 
     let difficulty = { spawnRate: 0.02, speedScale: 1, tick: 0 };
 
-    // -----------------------
-    // Helpers
-    // -----------------------
     function resetGame() {
       enemies = [];
       powerUps = [];
       particles = [];
       cameraShake = 0;
       screenFlash = 0;
-
       player.lane = 1;
       player.x = lanes[1];
-      player.y = canvas.height - carH - 30;
       player.nitro = 0;
       player.speed = player.baseSpeed;
       player.alive = true;
-
       difficulty = { spawnRate: 0.02, speedScale: 1, tick: 0 };
       roadOffset = 0;
       setScore(0);
@@ -110,7 +100,7 @@ export default function useGameEngine({
     function spawnEnemy() {
       const laneIdx = Math.floor(Math.random() * lanes.length);
       const img = Math.random() < 0.5 ? enemyImg1 : enemyImg2;
-      enemies.push({ x: lanes[laneIdx], y: -enemyH, w: enemyW, h: enemyH, img });
+      enemies.push({ x: lanes[laneIdx], y: -enemyH(), w: enemyW(), h: enemyH(), img });
     }
 
     function spawnNitro() {
@@ -130,53 +120,38 @@ export default function useGameEngine({
       player.alive = false;
       audio.playCrash?.();
       audio.pauseEngine?.();
-
       const newHigh = Math.max(highScore || 0, score || 0);
       setHighScore(newHigh);
-      try {
-        localStorage.setItem("high", String(newHigh));
-      } catch (e) {
-        // ignore localStorage errors in some environments
-      }
-
+      try { localStorage.setItem("high", String(newHigh)); } catch (e) {}
       setGameState("GAMEOVER");
     }
 
     function startGame() {
       resetGame();
-      audio.playEngine?.();
+      audio.playEngine?.().catch(()=>{});
       setGameState("PLAYING");
     }
 
-    // -----------------------
-    // Update logic
-    // -----------------------
     function update() {
       if (gameState !== "PLAYING") return;
-
       difficulty.tick++;
       if (difficulty.tick % 600 === 0) {
         difficulty.spawnRate = Math.min(difficulty.spawnRate + 0.005, 0.08);
         difficulty.speedScale = Math.min(difficulty.speedScale + 0.05, 1.8);
       }
-
       if (Math.random() < difficulty.spawnRate) spawnEnemy();
       if (Math.random() < 0.003) spawnNitro();
 
-      if (player.nitro > 0) {
-        player.speed = player.baseSpeed * 1.8;
-        player.nitro--;
-      } else {
-        player.speed = player.baseSpeed * difficulty.speedScale;
-      }
+      if (player.nitro > 0) { player.speed = player.baseSpeed * 1.8; player.nitro--; }
+      else { player.speed = player.baseSpeed * difficulty.speedScale; }
 
-      roadOffset = (roadOffset + player.speed) % canvas.height;
+      roadOffset = (roadOffset + player.speed) % logicalHeight();
 
       enemies.forEach((e) => (e.y += player.speed + 0.4 * difficulty.tick / 600));
-      enemies = enemies.filter((e) => e.y < canvas.height + enemyH);
+      enemies = enemies.filter((e) => e.y < logicalHeight() + enemyH());
 
       powerUps.forEach((p) => (p.y += player.speed));
-      powerUps = powerUps.filter((p) => p.y < canvas.height + 100);
+      powerUps = powerUps.filter((p) => p.y < logicalHeight() + 100);
 
       enemies.forEach((e) => {
         const hit =
@@ -196,65 +171,66 @@ export default function useGameEngine({
         if (got) {
           player.nitro = Math.min(player.nitro + 90, 180);
           audio.playPickup?.();
-          p.y = canvas.height + 100;
+          p.y = logicalHeight() + 100;
           particles.push({ x: player.x + player.w / 2, y: player.y + player.h / 2, life: 20 });
         }
       });
 
-      particles.forEach((pt) => {
-        pt.life--;
-        pt.y += 1.5;
-      });
+      particles.forEach((pt) => { pt.life--; pt.y += 1.5; });
       particles = particles.filter((pt) => pt.life > 0);
 
       setScore((s) => (s || 0) + 1);
     }
 
-    // -----------------------
-    // Draw logic
-    // -----------------------
     function drawRoad() {
-      const roadX = 40,
-        roadW = 320;
+      const roadX = 40;
+      const roadW = logicalWidth() - 80;
       const tileH = roadTile.height || 256;
       const offset = roadOffset % tileH;
-
-      for (let y = -tileH; y < canvas.height + tileH; y += tileH) {
+      for (let y = -tileH; y < logicalHeight() + tileH; y += tileH) {
         ctx.drawImage(roadTile, roadX, y + offset, roadW, tileH);
       }
-
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.lineWidth = 2;
       [roadX + laneWidth, roadX + laneWidth * 2].forEach((x) => {
         ctx.setLineDash([12, 14]);
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.lineTo(x, logicalHeight());
         ctx.stroke();
         ctx.setLineDash([]);
       });
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (cameraShake > 0) {
-        ctx.save();
-        ctx.translate((Math.random() - 0.5) * cameraShake, (Math.random() - 0.5) * cameraShake);
-        cameraShake *= 0.9;
+      if (imagesLoaded < images.length) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px sans-serif";
+        ctx.fillText("Loading...", 20, 40);
+        return;
       }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (cameraShake > 0) { ctx.save(); ctx.translate((Math.random()-0.5)*cameraShake, (Math.random()-0.5)*cameraShake); cameraShake *= 0.9; }
 
       drawRoad();
 
-      // draw player and other sprites only if images loaded (drawImage will no-op if not ready)
+      player.w = carW();
+      player.h = carH();
+      player.x = lanes[player.lane];
+      player.y = logicalHeight() - player.h - 30;
+
       ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
       enemies.forEach((e) => ctx.drawImage(e.img, e.x, e.y, e.w, e.h));
       powerUps.forEach((p) => ctx.drawImage(nitroImg, p.x, p.y, p.w, p.h));
 
       particles.forEach((pt) => {
-        ctx.fillStyle = `rgba(255,200,0,${pt.life / 20})`;
+        ctx.fillStyle = `rgba(255,200,0,${pt.life/20})`;
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 10 * (pt.life / 20), 0, Math.PI * 2);
+        ctx.arc(pt.x, pt.y, 10*(pt.life/20), 0, Math.PI*2);
         ctx.fill();
       });
 
@@ -271,109 +247,49 @@ export default function useGameEngine({
       if (!running) return;
       update();
       draw();
-
       const speedEl = document.getElementById("speed-readout");
       if (speedEl) speedEl.textContent = Math.round(player.speed * 20);
-
       rafId = requestAnimationFrame(loop);
     }
 
-    // -----------------------
-    // Input handlers
-    // -----------------------
-    function applyLane() {
-      player.x = lanes[player.lane];
-    }
-
+    function applyLane() { player.x = lanes[player.lane]; }
     function onKeyDown(e) {
-      if (e.key === "ArrowLeft" && player.lane > 0) {
-        player.lane--;
-        applyLane();
-      }
-      if (e.key === "ArrowRight" && player.lane < 2) {
-        player.lane++;
-        applyLane();
-      }
-      if (e.key === " ") {
-        player.nitro = Math.min(player.nitro + 90, 180);
-      }
+      if (e.key === "ArrowLeft" && player.lane > 0) { player.lane--; applyLane(); }
+      if (e.key === "ArrowRight" && player.lane < 2) { player.lane++; applyLane(); }
+      if (e.key === " ") { player.nitro = Math.min(player.nitro + 90, 180); }
       if (e.key.toLowerCase() === "p") {
-        if (gameState === "PLAYING") {
-          audio.pauseEngine?.();
-          setGameState("PAUSED");
-        } else if (gameState === "PAUSED") {
-          audio.playEngine?.();
-          setGameState("PLAYING");
-        }
+        if (gameState === "PLAYING") { audio.pauseEngine?.(); setGameState("PAUSED"); }
+        else if (gameState === "PAUSED") { audio.playEngine?.(); setGameState("PLAYING"); }
       }
     }
 
     let touchStartX = null;
-    function onTouchStart(e) {
-      touchStartX = e.changedTouches[0].clientX;
-    }
+    function onTouchStart(e) { touchStartX = e.changedTouches[0].clientX; }
     function onTouchEnd(e) {
       if (touchStartX === null) return;
       const dx = e.changedTouches[0].clientX - touchStartX;
-      if (dx < -30 && player.lane > 0) {
-        player.lane--;
-        applyLane();
-      } else if (dx > 30 && player.lane < 2) {
-        player.lane++;
-        applyLane();
-      } else {
-        player.nitro = Math.min(player.nitro + 90, 180);
-      }
+      if (dx < -30 && player.lane > 0) { player.lane--; applyLane(); }
+      else if (dx > 30 && player.lane < 2) { player.lane++; applyLane(); }
+      else { player.nitro = Math.min(player.nitro + 90, 180); }
       touchStartX = null;
     }
 
-    function onBtnLeft() {
-      if (player.lane > 0) {
-        player.lane--;
-        applyLane();
-      }
-    }
-    function onBtnRight() {
-      if (player.lane < 2) {
-        player.lane++;
-        applyLane();
-      }
-    }
-    function onBtnNitro() {
-      player.nitro = Math.min(player.nitro + 90, 180);
-    }
+    function onBtnLeft() { if (player.lane > 0) { player.lane--; applyLane(); } }
+    function onBtnRight() { if (player.lane < 2) { player.lane++; applyLane(); } }
+    function onBtnNitro() { player.nitro = Math.min(player.nitro + 90, 180); }
 
     function onVisibility() {
-      if (document.hidden && gameState === "PLAYING") {
-        audio.pauseEngine?.();
-        setGameState("PAUSED");
-      } else if (!document.hidden && gameState === "PAUSED") {
-        audio.playEngine?.();
-      }
+      if (document.hidden && gameState === "PLAYING") { audio.pauseEngine?.(); setGameState("PAUSED"); }
+      else if (!document.hidden && gameState === "PAUSED") { audio.playEngine?.(); }
     }
 
-    // -----------------------
-    // Start/Resume logic
-    // -----------------------
-    // Start engine and loop when entering PLAYING
     if (gameState === "PLAYING") {
-      if (!audio.isEnginePlaying?.()) audio.playEngine?.();
-      if (rafId === null) {
-        running = true;
-        rafId = requestAnimationFrame(loop);
-      }
-    } else {
-      audio.pauseEngine?.();
-    }
+      audio.playEngine?.().catch(()=>{});
+      if (rafId === null) { running = true; rafId = requestAnimationFrame(loop); }
+    } else { audio.pauseEngine?.(); }
 
-    // If entering PLAYING from MENU/GAMEOVER and score is zero, initialize game
-    if (gameState === "PLAYING" && (score === 0 || score === undefined)) {
-      startGame();
-    }
+    if (gameState === "PLAYING" && (score === 0 || score === undefined)) startGame();
 
-    // -----------------------
-    // Event listeners
-    // -----------------------
     window.addEventListener("keydown", onKeyDown);
     canvas.addEventListener("touchstart", onTouchStart, { passive: true });
     canvas.addEventListener("touchend", onTouchEnd, { passive: true });
@@ -385,22 +301,22 @@ export default function useGameEngine({
     btnRight && btnRight.addEventListener("click", onBtnRight);
     btnNitro && btnNitro.addEventListener("click", onBtnNitro);
 
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.addEventListener("click", startGame);
+
     document.addEventListener("visibilitychange", onVisibility);
 
-    // -----------------------
-    // Cleanup
-    // -----------------------
     return () => {
       running = false;
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
-
       window.removeEventListener("keydown", onKeyDown);
       canvas.removeEventListener("touchstart", onTouchStart);
       canvas.removeEventListener("touchend", onTouchEnd);
       btnLeft && btnLeft.removeEventListener("click", onBtnLeft);
       btnRight && btnRight.removeEventListener("click", onBtnRight);
       btnNitro && btnNitro.removeEventListener("click", onBtnNitro);
+      startBtn && startBtn.removeEventListener("click", startGame);
       document.removeEventListener("visibilitychange", onVisibility);
       audio.dispose?.();
     };

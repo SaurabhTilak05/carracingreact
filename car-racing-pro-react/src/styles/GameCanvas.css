@@ -1,0 +1,64 @@
+.game-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.game-container {
+  width: 100%;
+  max-width: 480px;
+  background: #0b0b0b;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #0b0b0b;
+}
+
+.controls-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  width: 100%;
+  max-width: 480px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.control-btn, .primary-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.control-btn {
+  background: #222;
+  color: #fff;
+  min-width: 56px;
+}
+
+.primary-btn {
+  background: #0b84ff;
+  color: #fff;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+@media (max-width: 420px) {
+  .control-btn, .primary-btn {
+    padding: 12px 10px;
+    font-size: 18px;
+    min-width: 48px;
+  }
+  .primary-btn { min-width: 100px; }
+}

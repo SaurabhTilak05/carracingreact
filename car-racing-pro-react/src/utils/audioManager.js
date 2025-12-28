@@ -1,25 +1,33 @@
 export function createAudioManager(paths) {
   const ASSET_BASE = import.meta.env.BASE_URL || "/";
 
-  const engine = new Audio(paths.engine.startsWith("http") ? paths.engine : `${ASSET_BASE}${paths.engine.replace(/^\/+/, "")}`);
+  function makeUrl(path) {
+    if (!path) return "";
+    if (path.startsWith("http") || path.startsWith("data:")) return path;
+    return `${ASSET_BASE}${path.replace(/^\/+/, "")}`;
+  }
+
+  const engine = new Audio(makeUrl(paths.engine));
   engine.loop = true;
   engine.volume = 0.5;
 
-  const crash = new Audio(paths.crash.startsWith("http") ? paths.crash : `${ASSET_BASE}${paths.crash.replace(/^\/+/, "")}`);
-  const pickup = new Audio(paths.pickup.startsWith("http") ? paths.pickup : `${ASSET_BASE}${paths.pickup.replace(/^\/+/, "")}`);
-  const click = new Audio(paths.click.startsWith("http") ? paths.click : `${ASSET_BASE}${paths.click.replace(/^\/+/, "")}`);
+  const crash = new Audio(makeUrl(paths.crash));
+  const pickup = new Audio(makeUrl(paths.pickup));
+  const click = new Audio(makeUrl(paths.click));
 
   const audios = [engine, crash, pickup, click];
   audios.forEach((a) => (a.muted = !!paths.muted));
 
   return {
-    playEngine() { engine.play().catch(() => {}); },
-    pauseEngine() { engine.pause(); },
+    async playEngine() {
+      try { await engine.play(); } catch (e) {}
+    },
+    pauseEngine() { try { engine.pause(); } catch (e) {} },
     isEnginePlaying() { return !engine.paused; },
-    playCrash() { crash.currentTime = 0; crash.play().catch(() => {}); },
-    playPickup() { pickup.currentTime = 0; pickup.play().catch(() => {}); },
-    playClick() { click.currentTime = 0; click.play().catch(() => {}); },
+    playCrash() { try { crash.currentTime = 0; crash.play().catch(()=>{}); } catch(e){} },
+    playPickup() { try { pickup.currentTime = 0; pickup.play().catch(()=>{}); } catch(e){} },
+    playClick() { try { click.currentTime = 0; click.play().catch(()=>{}); } catch(e){} },
     setMuted(flag) { audios.forEach((a) => (a.muted = !!flag)); },
-    dispose() { this.pauseEngine(); },
+    dispose() { try { engine.pause(); } catch (e) {} },
   };
 }
