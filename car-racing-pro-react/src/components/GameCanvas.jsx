@@ -12,24 +12,17 @@ export default function GameCanvas({
 }) {
   const canvasRef = useRef(null);
 
-  useGameEngine({
-    canvasRef,
-    gameState,
-    setGameState,
-    score,
-    setScore,
-    highScore,
-    setHighScore,
-    muted,
-  });
+useGameEngine({
+  canvasRef,
+  gameState,
+  setGameState,
+  score,
+  setScore,
+  highScore,
+  setHighScore,
+  muted,
+});
 
-  return (
-    <canvas
-      id="gameCanvas"
-      ref={canvasRef}
-      width={400}
-      height={700}
-      aria-label="Car Racing Game"
-    />
-  );
+return <canvas ref={canvasRef} width={400} height={700} />;
+
 }

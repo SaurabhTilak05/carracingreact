@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
+// 👇 This makes it work locally AND on GitHub Pages
 export default defineConfig({
   plugins: [react()],
-  base: '/carracingreact/'
+  base: process.env.NODE_ENV === 'production' ? '/carracingreact/' : '/'
 })

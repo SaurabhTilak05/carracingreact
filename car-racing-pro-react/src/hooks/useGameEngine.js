@@ -243,6 +243,7 @@ export default function useGameEngine({
             if (speedEl) speedEl.textContent = Math.round(player.speed * 20);
 
             rafId = requestAnimationFrame(loop);
+            
         }
 
         // Input
