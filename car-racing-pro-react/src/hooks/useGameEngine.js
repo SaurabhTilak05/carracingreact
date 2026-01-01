@@ -53,6 +53,11 @@ export default function useGameEngine({
       pickup: "assets/audio/pickup.wav",
     });
 
+    // Determine if we should be playing immediately (game started)
+    if (gameState === "PLAYING" && musicOn) {
+      audio.playEngine().catch(() => { });
+    }
+
 
     // 🔊 EXPOSE AUDIO START (REAL USER GESTURE REQUIRED)
     // expose engine start for real user gesture
@@ -79,7 +84,11 @@ export default function useGameEngine({
     // Cap car width relative to lane
     const carW = () => laneW() * 0.5;
     const carH = () => carW() * 2;
-    const playerY = () => H() - carH() - 30;
+    const playerY = () => {
+      // Mobile controls take up space at bottom, lift car up
+      const bottomMargin = W() < 900 ? 160 : 30;
+      return H() - carH() - bottomMargin;
+    };
 
     function laneX(lane) {
       // lane is 0, 1, 2
