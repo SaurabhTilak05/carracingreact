@@ -179,10 +179,31 @@ export default function useGameEngine({
       if (e.key === "ArrowRight") moveRight();
     }
 
+    // Touch Handling (Swipe)
+    let touchStartX = 0;
+
+    function onTouchStart(e) {
+      touchStartX = e.touches[0].clientX;
+    }
+
+    function onTouchEnd(e) {
+      if (gameState !== "PLAYING") return;
+      const touchEndX = e.changedTouches[0].clientX;
+      const diff = touchEndX - touchStartX;
+      const threshold = 30; // Minimum distance for swipe
+
+      if (Math.abs(diff) > threshold) {
+        if (diff > 0) moveRight();
+        else moveLeft();
+      }
+    }
+
     document.addEventListener("game-left", moveLeft);
     document.addEventListener("game-right", moveRight);
     document.addEventListener("game-start", startGame);
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("touchstart", onTouchStart);
+    window.addEventListener("touchend", onTouchEnd);
 
     /* ================= UPDATE ================= */
     function update() {
@@ -327,6 +348,8 @@ export default function useGameEngine({
       document.removeEventListener("game-right", moveRight);
       document.removeEventListener("game-start", startGame);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
 
       delete window.__START_ENGINE_SOUND__;
       audio.dispose?.();
