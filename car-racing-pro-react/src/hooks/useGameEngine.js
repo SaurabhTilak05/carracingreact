@@ -47,11 +47,11 @@ export default function useGameEngine({
     nitroImg.src = `${BASE}assets/images/nitro.png`;
 
     /* ================= AUDIO ================= */
-   const audio = createAudioManager({
-  engine: "assets/audio/engine.mp3",
-  crash: "assets/audio/crash.wav",
-  pickup: "assets/audio/pickup.wav",
-});
+    const audio = createAudioManager({
+      engine: "assets/audio/engine.mp3",
+      crash: "assets/audio/crash.wav",
+      pickup: "assets/audio/pickup.wav",
+    });
 
 
     // 🔊 EXPOSE AUDIO START (REAL USER GESTURE REQUIRED)
@@ -68,12 +68,23 @@ export default function useGameEngine({
     const W = () => canvas.width / dpr();
     const H = () => canvas.height / dpr();
 
-    const carW = () => W() * 0.12;
+    // Dynamic dimensions
+    const MAX_ROAD_WIDTH = 480;
+    const roadW = () => Math.min(W(), MAX_ROAD_WIDTH);
+    const roadMargin = () => (W() - roadW()) / 2;
+
+    const laneCount = 3;
+    const laneW = () => roadW() / laneCount;
+
+    // Cap car width relative to lane
+    const carW = () => laneW() * 0.5;
     const carH = () => carW() * 2;
     const playerY = () => H() - carH() - 30;
 
     function laneX(lane) {
-      return lanes[lane] - carW() / 2;
+      // lane is 0, 1, 2
+      // x = margin + (lane * laneW) + (laneW/2) - (carW/2)
+      return roadMargin() + (lane * laneW()) + (laneW() / 2) - (carW() / 2);
     }
 
     /* ================= GAME STATE ================= */
@@ -119,7 +130,7 @@ export default function useGameEngine({
 
     function spawnEnemy() {
       enemies.push({
-        lane: Math.floor(Math.random() * lanes.length),
+        lane: Math.floor(Math.random() * laneCount),
         y: -140,
         img: Math.random() < 0.5 ? enemy1 : enemy2,
       });
@@ -127,7 +138,7 @@ export default function useGameEngine({
 
     function spawnNitro() {
       nitros.push({
-        lane: Math.floor(Math.random() * lanes.length),
+        lane: Math.floor(Math.random() * laneCount),
         y: -100,
       });
     }
@@ -151,7 +162,7 @@ export default function useGameEngine({
     function moveRight() {
       if (gameState !== "PLAYING") return;
       const t = playerRef.current.lane + 1;
-      if (t < lanes.length && canChangeToLane(t)) playerRef.current.lane = t;
+      if (t < laneCount && canChangeToLane(t)) playerRef.current.lane = t;
     }
 
     function onKeyDown(e) {
@@ -222,13 +233,24 @@ export default function useGameEngine({
     /* ================= DRAW ================= */
     function drawRoad() {
       const tileH = road.height || 256;
+      const margin = roadMargin();
+      const rW = roadW();
+
+      // Draw road texture tiled
       for (let y = -tileH; y < H(); y += tileH) {
-        ctx.drawImage(road, 40, y + roadOffset, W() - 80, tileH);
+        ctx.drawImage(road, margin, y + roadOffset, rW, tileH);
       }
 
+      // Draw lane markers
       ctx.strokeStyle = "rgba(255,255,255,0.25)";
       ctx.lineWidth = 2;
-      [laneWidth + 40, laneWidth * 2 + 40].forEach((x) => {
+
+      // Calculate lane dividers
+      // Lane 1 start = margin + laneW
+      // Lane 2 start = margin + 2*laneW
+      const lW = laneW();
+
+      [margin + lW, margin + 2 * lW].forEach((x) => {
         ctx.setLineDash([12, 14]);
         ctx.beginPath();
         ctx.moveTo(x, 0);
@@ -239,7 +261,17 @@ export default function useGameEngine({
     }
 
     function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Draw Background (Striped Grass)
+      ctx.fillStyle = "#0a2a0a"; // Dark base
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw grass stripes
+      const stripeH = 100;
+      ctx.fillStyle = "#0f3f0f"; // Lighter grass
+      for (let y = -stripeH; y < H(); y += stripeH * 2) {
+        ctx.fillRect(0, y + (roadOffset % (stripeH * 2)), canvas.width, stripeH);
+      }
+
       drawRoad();
 
       ctx.drawImage(

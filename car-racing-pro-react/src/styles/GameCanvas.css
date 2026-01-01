@@ -1,79 +1,71 @@
+.game-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
 .game-container {
   position: relative;
   width: 100%;
-  max-width: 480px;
-  aspect-ratio: 400 / 700;
+  height: 100%;
   background: #000;
   overflow: hidden;
+  /* Canvas scaling handled by JS/CSS width/height */
 }
 
-/* Canvas stays at bottom */
+/* Canvas */
 .game-container canvas {
-  position: relative;
-  z-index: 1;
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Overlay ABOVE canvas */
 .overlay {
   position: absolute;
-  inset: 0;                 /* top, right, bottom, left = 0 */
-  z-index: 10;              /* higher than canvas */
+  inset: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
 }
 
 /* Overlay panel */
 .overlay .panel {
   background: #111;
   color: #fff;
-  padding: 20px;
-  border-radius: 12px;
+  padding: 24px;
+  border-radius: 16px;
   text-align: center;
-  width: 85%;
-  max-width: 320px;
+  width: 90%;
+  max-width: 360px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 /* Start button */
 .overlay .btn.primary {
-  margin-top: 12px;
-  padding: 12px 20px;
-  font-size: 16px;
-  border-radius: 10px;
+  margin-top: 16px;
+  padding: 14px 28px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
   border: none;
-  background: #0b84ff;
+  background: linear-gradient(135deg, #00d4ff, #007acc);
   color: #fff;
   cursor: pointer;
-}
-/* ===== MOBILE CONTROLS ===== */
-.controls-overlay {
-  position: absolute;
-  bottom: 16px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 24px;
-  z-index: 20; /* ABOVE CANVAS */
-  pointer-events: auto;
+  width: 100%;
+  transition: transform 0.1s;
 }
 
-.control-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
+.overlay .btn.primary:active {
+  transform: scale(0.98);
 }
 
-/* Desktop: hide buttons */
+/* Desktop: hide buttons if needed, but we used .mobile-controls in App.css */
 @media (min-width: 768px) {
-  .controls-overlay {
-    display: none;
-  }
+  /* Optional: hide mobile controls on desktop if you want keyboard only */
+  /* .mobile-controls { display: none; } */
 }

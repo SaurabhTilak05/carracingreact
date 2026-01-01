@@ -21,8 +21,9 @@ export default function GameCanvas({
 
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
-      const width = Math.min(container.clientWidth, 480);
-      const height = (width / 400) * 700;
+      // Use full container size
+      const width = container.clientWidth;
+      const height = container.clientHeight;
 
       canvas.style.width = width + "px";
       canvas.style.height = height + "px";
@@ -64,26 +65,7 @@ export default function GameCanvas({
         }}
       />
 
-      {/* 🔥 MOBILE CONTROLS (LEFT / RIGHT) */}
-      <div className="controls-overlay">
-        <button
-          className="control-btn"
-          onPointerDown={() =>
-            document.dispatchEvent(new Event("game-left"))
-          }
-        >
-          ◀
-        </button>
 
-        <button
-          className="control-btn"
-          onPointerDown={() =>
-            document.dispatchEvent(new Event("game-right"))
-          }
-        >
-          ▶
-        </button>
-      </div>
     </div>
   </div>
 );
